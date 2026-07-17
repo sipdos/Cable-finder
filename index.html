@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="description" content="Detecta cables electrificados en paredes con tu móvil. App gratuita, sin anuncios, funciona offline.">
+    <meta name="keywords" content="detector cables, cables pared, magnetómetro, electricidad, bricolaje, DIY">
+    <meta name="author" content="CableFinder">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CableFinder">
+    <meta property="og:title" content="CableFinder - Detector de Cables">
+    <meta property="og:description" content="Detecta cables electrificados en paredes usando solo tu móvil">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="assets/icons/icon-512.png">
+    <title>CableFinder - Detector de Cables Electrificados</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="assets/icons/icon-96.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background grid */
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; opacity: 0.02; z-index: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+
+        /* Floating particles */
+        .particle {
+            position: fixed; border-radius: 50%;
+            background: rgba(233, 69, 96, 0.3);
+            pointer-events: none; z-index: 0;
+            animation: float 15s infinite ease-in-out;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+            25% { transform: translateY(-30px) translateX(15px); opacity: 0.6; }
+            50% { transform: translateY(15px) translateX(-10px); opacity: 0.4; }
+            75% { transform: translateY(-20px) translateX(20px); opacity: 0.5; }
+        }
+
+        /* Header */
+        header {
+            position: relative; z-index: 1;
+            text-align: center; padding: 60px 20px 40px;
+        }
+        .logo {
+            width: 100px; height: 100px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border-radius: 28px;
+            margin: 0 auto 24px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 40px rgba(233, 69, 96, 0.4);
+            animation: pulse 3s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .logo svg { width: 52px; height: 52px; }
+        h1 {
+            font-size: 42px; font-weight: 800;
+            letter-spacing: -2px; margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff, #8892b0);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .tagline {
+            font-size: 18px; color: #8892b0;
+            max-width: 500px; margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        /* CTA Buttons */
+        .cta-section {
+            text-align: center; padding: 20px;
+            position: relative; z-index: 1;
+        }
+        .btn-primary {
+            display: inline-block;
+            padding: 18px 48px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: #fff; text-decoration: none;
+            border-radius: 16px; font-size: 18px;
+            font-weight: 700; border: none;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(233, 69, 96, 0.4);
+            transition: all 0.3s;
+            margin: 8px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(233, 69, 96, 0.5);
+        }
+        .btn-secondary {
+            display: inline-block;
+            padding: 18px 48px;
+            background: rgba(255,255,255,0.08);
+            color: #ccd6f6; text-decoration: none;
+            border-radius: 16px; font-size: 16px;
+            font-weight: 600; border: 1px solid rgba(255,255,255,0.15);
+            cursor: pointer; transition: all 0.3s;
+            margin: 8px;
+        }
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-2px);
+        }
+
+        /* Features */
+        .features {
+            padding: 60px 20px;
+            max-width: 1100px; margin: 0 auto;
+            position: relative; z-index: 1;
+        }
+        .features h2 {
+            text-align: center; font-size: 32px;
+            margin-bottom: 48px; font-weight: 700;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px; padding: 32px;
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(233, 69, 96, 0.3);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .feature-icon {
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, rgba(233,69,96,0.2), rgba(255,107,107,0.2));
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 20px; font-size: 28px;
+        }
+        .feature-card h3 {
+            font-size: 20px; margin-bottom: 12px;
+            font-weight: 700;
+        }
+        .feature-card p {
+            font-size: 15px; color: #8892b0;
+            line-height: 1.6;
+        }
+
+        /* How it works */
+        .how-it-works {
+            background: rgba(0,0,0,0.2);
+            padding: 60px 20px;
+            position: relative; z-index: 1;
+        }
+        .how-it-works h2 {
+            text-align: center; font-size: 32px;
+            margin-bottom: 48px; font-weight: 700;
+        }
+        .steps {
+            max-width: 800px; margin: 0 auto;
+            display: flex; flex-direction: column; gap: 32px;
+        }
+        .step {
+            display: flex; align-items: flex-start; gap: 24px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 20px; padding: 28px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .step-number {
+            width: 48px; height: 48px; min-width: 48px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: 800;
+        }
+        .step-content h3 {
+            font-size: 20px; margin-bottom: 8px;
+        }
+        .step-content p {
+            font-size: 15px; color: #8892b0;
+            line-height: 1.6;
+        }
+
+        /* Phone mockup */
+        .demo-section {
+            padding: 60px 20px;
+            text-align: center;
+            position: relative; z-index: 1;
+        }
+        .demo-section h2 {
+            font-size: 32px; margin-bottom: 40px;
+            font-weight: 700;
+        }
+        .phone-mockup {
+            width: 280px; height: 560px;
+            background: #1a1a2e;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 36px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+        }
+        .phone-notch {
+            width: 120px; height: 28px;
+            background: #0f0f23;
+            border-radius: 0 0 20px 20px;
+            margin: 0 auto;
+        }
+        .phone-screen {
+            padding: 20px;
+            text-align: left;
+        }
+        .mockup-header {
+            text-align: center; padding: 10px 0;
+        }
+        .mockup-header h4 {
+            font-size: 14px; color: #fff;
+            margin: 0;
+        }
+        .mockup-gauge {
+            width: 160px; height: 160px;
+            margin: 20px auto;
+            border-radius: 50%;
+            border: 8px solid rgba(233,69,96,0.3);
+            border-top-color: #e94560;
+            display: flex; align-items: center; justify-content: center;
+            animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .mockup-value {
+            position: absolute;
+            font-size: 36px; font-weight: 800;
+            color: #fff;
+        }
+        .mockup-bar {
+            height: 12px; background: rgba(255,255,255,0.1);
+            border-radius: 6px; margin: 20px 0;
+            overflow: hidden;
+        }
+        .mockup-bar-fill {
+            height: 100%; width: 65%;
+            background: linear-gradient(90deg, #00d9ff, #e94560);
+            border-radius: 6px;
+            animation: barPulse 2s infinite;
+        }
+        @keyframes barPulse {
+            0%, 100% { width: 45%; }
+            50% { width: 85%; }
+        }
+
+        /* Install badges */
+        .install-section {
+            padding: 40px 20px;
+            text-align: center;
+            position: relative; z-index: 1;
+        }
+        .install-section h3 {
+            font-size: 24px; margin-bottom: 20px;
+        }
+        .badges {
+            display: flex; justify-content: center; gap: 16px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px; padding: 12px 24px;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; color: #ccd6f6;
+        }
+        .badge-icon { font-size: 24px; }
+
+        /* Footer */
+        footer {
+            text-align: center; padding: 40px 20px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            position: relative; z-index: 1;
+        }
+        footer p {
+            font-size: 14px; color: #4a5568;
+        }
+        footer a {
+            color: #e94560; text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            h1 { font-size: 32px; }
+            .tagline { font-size: 16px; }
+            .btn-primary, .btn-secondary {
+                display: block; width: 100%; margin: 8px 0;
+            }
+            .step { flex-direction: column; text-align: center; }
+            .step-number { margin: 0 auto; }
+            .phone-mockup { width: 240px; height: 480px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <!-- Floating particles -->
+    <div class="particle" style="width: 8px; height: 8px; top: 10%; left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="width: 12px; height: 12px; top: 20%; left: 80%; animation-delay: 2s;"></div>
+    <div class="particle" style="width: 6px; height: 6px; top: 60%; left: 15%; animation-delay: 4s;"></div>
+    <div class="particle" style="width: 10px; height: 10px; top: 80%; left: 70%; animation-delay: 1s;"></div>
+    <div class="particle" style="width: 14px; height: 14px; top: 40%; left: 50%; animation-delay: 3s;"></div>
+
+    <header>
+        <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+        </div>
+        <h1>CableFinder</h1>
+        <p class="tagline">
+            Detecta cables electrificados en paredes usando solo el magnetómetro de tu móvil. 
+            Sin hardware adicional, sin anuncios, 100% gratuita.
+        </p>
+    </header>
+
+    <section class="cta-section">
+        <a href="app.html" class="btn-primary">🚀 Usar la App Ahora</a>
+        <a href="https://github.com/tu-usuario/cablefinder" class="btn-secondary" target="_blank">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+            </svg>
+            Ver en GitHub
+        </a>
+    </section>
+
+    <section class="features">
+        <h2>⚡ ¿Por qué CableFinder?</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Detector en tiempo real</h3>
+                <p>Medidor circular con gráfico de historial que responde instantáneamente al acercarte a un cable con corriente.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📖</div>
+                <h3>Tutorial interactivo</h3>
+                <p>Aprende paso a paso con animaciones visuales. Diseñado para personas sin conocimientos técnicos.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎮</div>
+                <h3>Modo práctica</h3>
+                <p>Simulador de pared con cables ocultos para practicar antes de usar el detector real.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📲</div>
+                <h3>Instalable como app</h3>
+                <p>Funciona como Progressive Web App (PWA). Instálala en tu pantalla de inicio sin descargar nada de las tiendas.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌐</div>
+                <h3>Funciona offline</h3>
+                <p>Una vez cargada, funciona sin conexión a internet. Ideal para obras y lugares sin cobertura.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Sin anuncios ni trackers</h3>
+                <p>Código abierto, sin publicidad, sin recolección de datos. Tu privacidad es prioridad.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works">
+        <h2>🔧 ¿Cómo funciona?</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Activa la electricidad</h3>
+                    <p>Los cables apagados no generan campo magnético. Enciende la luz o conecta un electrodoméstico al circuito que quieres rastrear.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Posiciona tu móvil</h3>
+                    <p>Mantén el teléfono paralelo a la pared, a 1-3 cm de distancia. El sensor magnético está generalmente en la parte superior del dispositivo.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Busca el pico máximo</h3>
+                    <p>Muévete lentamente por la pared. Cuando el valor suba significativamente, estás sobre un cable electrificado. Marca el punto y sigue la línea.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="demo-section">
+        <h2>📱 Vista previa</h2>
+        <div class="phone-mockup">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+                <div class="mockup-header">
+                    <h4>⚡ Detector</h4>
+                </div>
+                <div style="position: relative; display: flex; justify-content: center; margin: 20px 0;">
+                    <div class="mockup-gauge"></div>
+                    <div class="mockup-value">42.5</div>
+                </div>
+                <div style="text-align: center; font-size: 12px; color: #e94560; font-weight: 700;">🔴 ¡CABLE DETECTADO!</div>
+                <div class="mockup-bar">
+                    <div class="mockup-bar-fill"></div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 10px; margin-top: 10px;">
+                    <div style="font-size: 10px; color: #4a5568; margin-bottom: 4px;">📊 Historial</div>
+                    <svg width="100%" height="40" viewBox="0 0 200 40">
+                        <polyline points="0,35 20,30 40,25 60,15 80,10 100,8 120,12 140,20 160,18 180,22 200,25" 
+                            fill="none" stroke="#00d9ff" stroke-width="2"/>
+                        <polyline points="0,35 20,30 40,25 60,15 80,10 100,8 120,12 140,20 160,18 180,22 200,25" 
+                            fill="rgba(0,217,255,0.1)" stroke="none"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="install-section">
+        <h3>📲 Instala en tu móvil</h3>
+        <div class="badges">
+            <div class="badge">
+                <span class="badge-icon">🤖</span>
+                <div>
+                    <div style="font-size: 10px; color: #8892b0;">Disponible para</div>
+                    <div style="font-weight: 700;">Android</div>
+                </div>
+            </div>
+            <div class="badge">
+                <span class="badge-icon">🍎</span>
+                <div>
+                    <div style="font-size: 10px; color: #8892b0;">Disponible para</div>
+                    <div style="font-weight: 700;">iOS</div>
+                </div>
+            </div>
+            <div class="badge">
+                <span class="badge-icon">🌐</span>
+                <div>
+                    <div style="font-size: 10px; color: #8892b0;">Funciona en</div>
+                    <div style="font-weight: 700;">Cualquier navegador</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>
+            Hecho con ⚡ por la comunidad · 
+            <a href="https://github.com/tu-usuario/cablefinder">GitHub</a> · 
+            <a href="LICENSE">Licencia MIT</a>
+        </p>
+        <p style="margin-top: 8px; font-size: 12px;">
+            Disclaimer: Herramienta orientativa. Para trabajos eléctricos profesionales use un detector certificado.
+        </p>
+    </footer>
+
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW error', err));
+        }
+    </script>
+</body>
+</html>

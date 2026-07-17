@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CableFinder">
+    <title>CableFinder - Detector</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" href="assets/icons/icon-96.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff; min-height: 100vh; overflow-x: hidden;
+        }
+        .bg-grid {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; opacity: 0.02; z-index: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.3) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        #app { max-width: 480px; margin: 0 auto; position: relative; z-index: 1; min-height: 100vh; }
+        .app-header {
+            padding: 16px 20px 12px; text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .app-header .logo {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border-radius: 12px;
+            margin: 0 auto 8px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 15px rgba(233,69,96,0.3);
+        }
+        .app-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+        .app-header p { font-size: 11px; color: #8892b0; margin: 2px 0 0; }
+        .nav-tabs {
+            display: flex; padding: 8px 12px 0; gap: 6px;
+        }
+        .nav-tab {
+            flex: 1; padding: 10px 8px; border: none;
+            border-radius: 12px; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: all 0.25s;
+            background: rgba(255,255,255,0.06);
+            color: #8892b0; text-align: center;
+        }
+        .nav-tab.active {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(233,69,96,0.3);
+        }
+        .screen { display: none; padding: 16px 16px 80px; animation: fadeIn 0.4s; }
+        .screen.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px; padding: 20px;
+            margin-bottom: 16px;
+        }
+        .progress-dots {
+            display: flex; justify-content: center; gap: 8px; margin-bottom: 20px;
+        }
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transition: all 0.3s;
+        }
+        .dot.active { background: #e94560; transform: scale(1.3); }
+        .dot.completed { background: #00d9ff; }
+        .step-badge {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 16px; margin-bottom: 12px;
+        }
+        .step-badge.done {
+            background: linear-gradient(135deg, #00d9ff, #00b4d8);
+        }
+        .step-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .step-desc { font-size: 14px; color: #8892b0; line-height: 1.6; margin-bottom: 16px; }
+        .visual-box {
+            background: rgba(0,0,0,0.3); border-radius: 16px;
+            padding: 20px; text-align: center;
+        }
+        .btn {
+            padding: 12px 24px; border: none; border-radius: 14px;
+            font-weight: 700; cursor: pointer; transition: all 0.25s;
+            font-size: 14px; display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #ff6b6b);
+            color: white; box-shadow: 0 4px 15px rgba(233,69,96,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-secondary {
+            background: rgba(255,255,255,0.08);
+            color: #ccd6f6; border: 1px solid rgba(255,255,255,0.12);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.12); }
+        .btn-accent {
+            background: linear-gradient(135deg, #00d9ff, #00b4d8);
+            color: #0f0f23;
+        }
+        .nav-buttons {
+            display: flex; justify-content: space-between; margin-top: 20px;
+        }
+        .tip-item {
+            display: flex; align-items: center; gap: 12px;
+            background: rgba(0,217,255,0.06);
+            border-radius: 12px; padding: 14px;
+            border-left: 3px solid #00d9ff;
+            margin-bottom: 10px;
+        }
+        .tip-item.warning {
+            background: rgba(233,69,96,0.06);
+            border-left-color: #e94560;
+        }
+        .tip-icon { font-size: 22px; }
+        .tip-text { font-size: 13px; color: #ccd6f6; line-height: 1.5; }
+        .practice-wall {
+            background: linear-gradient(180deg, #2d3748, #1a202c);
+            border-radius: 16px; height: 260px;
+            position: relative; overflow: hidden;
+            border: 2px solid #4a5568; cursor: crosshair;
+            touch-action: none;
+        }
+        .practice-cursor {
+            position: absolute; width: 44px; height: 44px;
+            border: 3px solid #00d9ff; border-radius: 50%;
+            transform: translate(-50%, -50%); pointer-events: none;
+            display: none;
+            box-shadow: 0 0 20px rgba(0,217,255,0.4);
+        }
+        .practice-cursor::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 6px; height: 6px; background: #00d9ff;
+            border-radius: 50%; transform: translate(-50%, -50%);
+        }
+        .status-badge { text-align: center; margin-bottom: 16px; }
+        .status-badge span {
+            display: inline-block; padding: 6px 16px;
+            border-radius: 20px; font-size: 12px; font-weight: 600;
+        }
+        .status-waiting { background: rgba(255,193,7,0.15); color: #ffc107; }
+        .status-active { background: rgba(0,217,255,0.15); color: #00d9ff; }
+        .status-error { background: rgba(233,69,96,0.15); color: #e94560; }
+        .gauge-container {
+            position: relative; width: 200px; height: 200px;
+            margin: 0 auto 16px;
+        }
+        .gauge-value {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); text-align: center;
+        }
+        .gauge-value .number { font-size: 40px; font-weight: 800; line-height: 1; }
+        .gauge-value .unit { font-size: 13px; color: #8892b0; margin-top: 4px; }
+        .detection-status {
+            text-align: center; padding: 10px 20px;
+            border-radius: 12px; display: inline-block;
+            background: rgba(255,255,255,0.05);
+            font-size: 14px; margin: 0 auto; display: block; width: fit-content;
+        }
+        .meter-bar-container {
+            background: rgba(255,255,255,0.08);
+            border-radius: 8px; height: 16px;
+            overflow: hidden; margin-bottom: 6px;
+        }
+        .meter-bar {
+            height: 100%; border-radius: 8px;
+            transition: width 0.2s, background 0.3s;
+            background: linear-gradient(90deg, #00d9ff, #ffd700, #e94560);
+        }
+        .meter-labels {
+            display: flex; justify-content: space-between;
+            font-size: 10px; color: #4a5568;
+        }
+        .graph-container {
+            background: rgba(0,0,0,0.25);
+            border-radius: 12px; padding: 12px;
+        }
+        .graph-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 8px;
+        }
+        .graph-header span { font-size: 12px; color: #8892b0; }
+        .peak-display { font-size: 12px; color: #e94560; font-weight: 600; }
+        canvas { display: block; width: 100%; }
+        .live-tip {
+            background: rgba(0,217,255,0.06);
+            border-radius: 14px; padding: 14px;
+            border: 1px solid rgba(0,217,255,0.12);
+        }
+        .live-tip h4 { font-size: 13px; color: #00d9ff; margin-bottom: 6px; }
+        .live-tip p { font-size: 13px; color: #ccd6f6; line-height: 1.5; margin: 0; }
+        .calibrate-btn {
+            width: 100%; margin-top: 14px;
+            padding: 14px; background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; color: #8892b0;
+            font-weight: 600; cursor: pointer; font-size: 13px;
+            transition: all 0.25s;
+        }
+        .calibrate-btn:hover { background: rgba(255,255,255,0.1); }
+        @media (max-width: 400px) {
+            .gauge-container { width: 170px; height: 170px; }
+            .gauge-value .number { font-size: 32px; }
+            .nav-tab { font-size: 11px; padding: 8px 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div id="app">
+        <div class="app-header">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+            </div>
+            <h1>CableFinder</h1>
+            <p>Detector de cables electrificados</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-screen="tutorial" onclick="showScreen('tutorial')">📖 Tutorial</button>
+            <button class="nav-tab" data-screen="practice" onclick="showScreen('practice')">🎯 Práctica</button>
+            <button class="nav-tab" data-screen="detector" onclick="showScreen('detector')">⚡ Detector</button>
+        </div>
+
+        <!-- TUTORIAL -->
+        <div class="screen active" id="screen-tutorial">
+            <div class="progress-dots" id="progress-dots">
+                <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+
+            <div id="tutorial-steps">
+                <div class="step-content" data-step="0">
+                    <div class="card">
+                        <div class="step-badge">1</div>
+                        <div class="step-title">Activa la electricidad</div>
+                        <div class="step-desc">Los cables <b>apagados</b> no generan campo magnético. Enciende la luz o conecta un electrodoméstico al circuito que quieres rastrear.</div>
+                        <div class="visual-box">
+                            <svg width="220" height="130" viewBox="0 0 220 130" style="max-width: 100%;">
+                                <rect x="10" y="10" width="200" height="110" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="2"/>
+                                <circle id="tut-bulb" cx="70" cy="55" r="18" fill="#4a5568" style="transition: all 0.3s;"/>
+                                <path d="M62 73 Q70 80 78 73" fill="none" stroke="#4a5568" stroke-width="2" id="tut-bulb-base"/>
+                                <rect x="150" y="40" width="30" height="50" rx="4" fill="#1a202c" stroke="#718096" stroke-width="1"/>
+                                <rect id="tut-switch" x="155" y="50" width="20" height="18" rx="2" fill="#e94560" style="transition: all 0.3s;"/>
+                                <line x1="70" y1="73" x2="70" y2="105" stroke="#e94560" stroke-width="2" stroke-dasharray="4,4" opacity="0.25"/>
+                                <line x1="70" y1="105" x2="150" y2="105" stroke="#e94560" stroke-width="2" stroke-dasharray="4,4" opacity="0.25"/>
+                                <line x1="150" y1="105" x2="150" y2="90" stroke="#e94560" stroke-width="2" stroke-dasharray="4,4" opacity="0.25"/>
+                                <g id="tut-sparks" opacity="0" style="transition: opacity 0.3s;">
+                                    <line x1="52" y1="40" x2="45" y2="33" stroke="#ffd700" stroke-width="2"/>
+                                    <line x1="88" y1="40" x2="95" y2="33" stroke="#ffd700" stroke-width="2"/>
+                                    <line x1="70" y1="33" x2="70" y2="25" stroke="#ffd700" stroke-width="2"/>
+                                </g>
+                            </svg>
+                            <div style="margin-top: 14px;">
+                                <button class="btn btn-primary" onclick="toggleTutorialLight()" id="tut-toggle-btn">🔌 Encender luz</button>
+                            </div>
+                            <p id="tut-status" style="margin-top: 10px; font-size: 13px; color: #e94560; font-weight: 600;">⚠️ La luz está APAGADA</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-content" data-step="1" style="display: none;">
+                    <div class="card">
+                        <div class="step-badge">2</div>
+                        <div class="step-title">Posición correcta</div>
+                        <div class="step-desc">Mantén el teléfono <b>paralelo</b> a la pared, a 1-3 cm de distancia. El sensor magnético está generalmente en la parte superior del dispositivo.</div>
+                        <div class="visual-box">
+                            <svg width="240" height="160" viewBox="0 0 240 160" style="max-width: 100%;">
+                                <rect x="10" y="10" width="220" height="140" rx="8" fill="#1a202c" stroke="#4a5568" stroke-width="2"/>
+                                <line x1="40" y1="80" x2="200" y2="80" stroke="#e94560" stroke-width="3" stroke-dasharray="6,4" opacity="0.5"/>
+                                <g id="pos-phone" style="transition: transform 0.5s;">
+                                    <rect x="95" y="45" width="50" height="85" rx="8" fill="#0f3460" stroke="#e94560" stroke-width="2"/>
+                                    <rect x="100" y="50" width="40" height="70" rx="2" fill="#1a1a2e"/>
+                                    <circle cx="120" cy="55" r="4" fill="#00d9ff" opacity="0.9">
+                                        <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.5s" repeatCount="indefinite"/>
+                                    </circle>
+                                </g>
+                                <line x1="120" y1="130" x2="120" y2="148" stroke="#00d9ff" stroke-width="1" stroke-dasharray="3,2"/>
+                                <text x="135" y="145" fill="#00d9ff" font-size="10">2-3 cm</text>
+                                <ellipse cx="120" cy="80" rx="55" ry="22" fill="none" stroke="#e94560" stroke-width="1" opacity="0.3" stroke-dasharray="4,4">
+                                    <animate attributeName="rx" values="50;60;50" dur="2s" repeatCount="indefinite"/>
+                                    <animate attributeName="ry" values="18;26;18" dur="2s" repeatCount="indefinite"/>
+                                </ellipse>
+                                <text x="120" y="28" fill="#ffd700" font-size="11" text-anchor="middle">👆 Mueve lentamente</text>
+                            </svg>
+                            <div style="margin-top: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                                <span style="background: rgba(0,217,255,0.12); color: #00d9ff; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;">✅ Paralelo a la pared</span>
+                                <span style="background: rgba(233,69,96,0.12); color: #e94560; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 600;">❌ No en ángulo</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-content" data-step="2" style="display: none;">
+                    <div class="card">
+                        <div class="step-badge">3</div>
+                        <div class="step-title">Lee el medidor</div>
+                        <div class="step-desc">Cuando te acerques a un cable con corriente, el valor subirá. Busca el <b>PICO más alto</b> — ahí está el cable.</div>
+                        <div class="visual-box">
+                            <div style="background: linear-gradient(90deg, #0f3460, #1a1a2e); border-radius: 12px; padding: 16px; margin-bottom: 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-size: 12px; color: #8892b0;">Intensidad del campo</span>
+                                    <span id="sim-value" style="font-size: 22px; font-weight: 700; color: #00d9ff;">0.0 µT</span>
+                                </div>
+                                <div class="meter-bar-container"><div id="sim-bar" class="meter-bar" style="width: 5%;"></div></div>
+                                <div class="meter-labels"><span>Nada</span><span>Cable detectado</span><span>Muy cerca</span></div>
+                            </div>
+                            <svg width="200" height="70" viewBox="0 0 200 70" style="margin: 0 auto; display: block;">
+                                <line x1="10" y1="55" x2="190" y2="55" stroke="#4a5568" stroke-width="2"/>
+                                <circle cx="100" cy="55" r="4" fill="#e94560" opacity="0.5"/>
+                                <circle id="sim-scanner" cx="20" cy="42" r="5" fill="#00d9ff">
+                                    <animate attributeName="cx" values="20;100;180;100;20" dur="4s" repeatCount="indefinite"/>
+                                    <animate attributeName="cy" values="42;28;42;28;42" dur="4s" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                            <div style="margin-top: 12px;"><button class="btn btn-accent" onclick="runScanSimulation()">▶️ Simular búsqueda</button></div>
+                            <p id="sim-result" style="margin-top: 10px; font-size: 13px; color: #8892b0; min-height: 20px;"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-content" data-step="3" style="display: none;">
+                    <div class="card">
+                        <div class="step-badge done">✓</div>
+                        <div class="step-title">¡Listo para usar!</div>
+                        <div class="step-desc">Ahora ve al <b>Detector</b> para usar el sensor real de tu móvil. Recuerda estos puntos clave:</div>
+                        <div class="tip-item">
+                            <span class="tip-icon">💡</span>
+                            <span class="tip-text">Enciende la luz o conecta algo al enchufe primero</span>
+                        </div>
+                        <div class="tip-item">
+                            <span class="tip-icon">📱</span>
+                            <span class="tip-text">Mantén el teléfono paralelo y cerca de la pared</span>
+                        </div>
+                        <div class="tip-item">
+                            <span class="tip-icon">🐢</span>
+                            <span class="tip-text">Muévete LENTAMENTE, busca el pico máximo</span>
+                        </div>
+                        <div class="tip-item warning">
+                            <span class="tip-icon">⚠️</span>
+                            <span class="tip-text">No detecta cables apagados ni muy profundos (&gt;5cm)</span>
+                        </div>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 16px; justify-content: center; padding: 16px; font-size: 16px;" onclick="showScreen('detector')">🚀 Ir al Detector</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-secondary" id="btn-prev" onclick="prevStep()" disabled>← Anterior</button>
+                <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Siguiente →</button>
+            </div>
+        </div>
+
+        <!-- PRACTICE -->
+        <div class="screen" id="screen-practice">
+            <div class="card">
+                <h3 style="font-size: 16px; margin-bottom: 6px;">🎯 Modo Práctica</h3>
+                <p style="font-size: 13px; color: #8892b0; margin-bottom: 16px;">Simula una pared con cables ocultos. Toca y arrastra para "escanear".</p>
+                <div class="practice-wall" id="practice-wall">
+                    <svg width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
+                        <line id="pcable1" x1="15%" y1="30%" x2="85%" y2="30%" stroke="#e94560" stroke-width="4" stroke-dasharray="8,6" opacity="0"/>
+                        <line id="pcable2" x1="40%" y1="60%" x2="40%" y2="90%" stroke="#e94560" stroke-width="4" stroke-dasharray="8,6" opacity="0"/>
+                        <line id="pcable3" x1="70%" y1="15%" x2="70%" y2="50%" stroke="#e94560" stroke-width="4" stroke-dasharray="8,6" opacity="0"/>
+                    </svg>
+                    <div class="practice-cursor" id="practice-cursor"></div>
+                    <canvas id="heat-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.55;"></canvas>
+                    <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 8px 12px; border-radius: 8px;">
+                        <span style="font-size: 11px; color: #8892b0;">👆 Toca y arrastra para escanear</span>
+                    </div>
+                </div>
+                <div style="margin-top: 14px; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="font-size: 12px; color: #8892b0;">Señal detectada</span>
+                        <span id="practice-value" style="font-size: 18px; font-weight: 700; color: #00d9ff;">0%</span>
+                    </div>
+                    <div class="meter-bar-container"><div id="practice-bar" class="meter-bar" style="width: 0%;"></div></div>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="btn btn-secondary" style="flex: 1; justify-content: center; font-size: 12px;" onclick="revealCables()">👁️ Revelar cables</button>
+                    <button class="btn btn-secondary" style="flex: 1; justify-content: center; font-size: 12px;" onclick="resetPractice()">🔄 Reiniciar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETECTOR -->
+        <div class="screen" id="screen-detector">
+            <div class="status-badge" id="sensor-status">
+                <span class="status-waiting">⏳ Iniciando sensor...</span>
+            </div>
+
+            <div class="card" style="text-align: center;">
+                <div class="gauge-container">
+                    <svg width="200" height="200" viewBox="0 0 200 200" style="transform: rotate(-90deg);">
+                        <defs>
+                            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#00d9ff"/>
+                                <stop offset="50%" style="stop-color:#ffd700"/>
+                                <stop offset="100%" style="stop-color:#e94560"/>
+                            </linearGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="14"/>
+                        <circle id="gauge-progress" cx="100" cy="100" r="85" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round"
+                            stroke-dasharray="534" stroke-dashoffset="534" style="transition: stroke-dashoffset 0.3s ease;"/>
+                    </svg>
+                    <div class="gauge-value">
+                        <div class="number" id="main-value">0.0</div>
+                        <div class="unit">µT</div>
+                    </div>
+                </div>
+                <div class="detection-status" id="detection-text">
+                    <span style="color: #8892b0;">🔍 Buscando cables...</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="graph-header">
+                    <span>📊 Historial (últimos 5 seg)</span>
+                    <span class="peak-display" id="peak-value">Pico: 0.0 µT</span>
+                </div>
+                <div class="graph-container">
+                    <canvas id="graph-canvas" width="400" height="100"></canvas>
+                </div>
+            </div>
+
+            <div class="card live-tip">
+                <h4>💡 Consejo en tiempo real</h4>
+                <p id="live-tip">Mueve el teléfono lentamente cerca de la pared. El valor subirá cuando detectes un cable electrificado.</p>
+            </div>
+
+            <button class="calibrate-btn" onclick="calibrateSensor()">🎯 Calibrar sensor (aleja el móvil de metales)</button>
+        </div>
+
+        <div style="height: 30px;"></div>
+    </div>
+
+<script>
+let currentStep = 0;
+const totalSteps = 4;
+let tutLightOn = false;
+let simRunning = false;
+let sensorData = [];
+let baseline = 0;
+let peakValue = 0;
+let animId = null;
+let isDemoMode = false;
+
+const practiceCables = [
+    { x1: 0.15, y1: 0.30, x2: 0.85, y2: 0.30, strength: 100 },
+    { x1: 0.40, y1: 0.60, x2: 0.40, y2: 0.90, strength: 80 },
+    { x1: 0.70, y1: 0.15, x2: 0.70, y2: 0.50, strength: 90 }
+];
+let cablesRevealed = false;
+
+function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelector('.nav-tab[data-screen="' + name + '"]').classList.add('active');
+    if (name === 'detector') initSensor();
+    else stopSensor();
+}
+
+function updateDots() {
+    const dots = document.querySelectorAll('.dot');
+    dots.forEach((d, i) => {
+        d.classList.remove('active', 'completed');
+        if (i === currentStep) d.classList.add('active');
+        else if (i < currentStep) d.classList.add('completed');
+    });
+}
+
+function showStepContent(n) {
+    document.querySelectorAll('.step-content').forEach((el, i) => {
+        el.style.display = i === n ? 'block' : 'none';
+    });
+    updateDots();
+    const prevBtn = document.getElementById('btn-prev');
+    const nextBtn = document.getElementById('btn-next');
+    prevBtn.disabled = n === 0;
+    prevBtn.style.opacity = n === 0 ? '0.3' : '1';
+    if (n === totalSteps - 1) {
+        nextBtn.textContent = '🚀 ¡Empezar!';
+        nextBtn.classList.remove('btn-primary');
+        nextBtn.classList.add('btn-accent');
+    } else {
+        nextBtn.textContent = 'Siguiente →';
+        nextBtn.classList.remove('btn-accent');
+        nextBtn.classList.add('btn-primary');
+    }
+}
+
+function nextStep() {
+    if (currentStep < totalSteps - 1) { currentStep++; showStepContent(currentStep); }
+    else { showScreen('detector'); }
+}
+function prevStep() {
+    if (currentStep > 0) { currentStep--; showStepContent(currentStep); }
+}
+
+function toggleTutorialLight() {
+    tutLightOn = !tutLightOn;
+    const bulb = document.getElementById('tut-bulb');
+    const sparks = document.getElementById('tut-sparks');
+    const sw = document.getElementById('tut-switch');
+    const status = document.getElementById('tut-status');
+    const btn = document.getElementById('tut-toggle-btn');
+    if (tutLightOn) {
+        bulb.setAttribute('fill', '#ffd700');
+        bulb.style.filter = 'drop-shadow(0 0 12px #ffd700)';
+        sparks.setAttribute('opacity', '1');
+        sw.setAttribute('y', '55');
+        status.innerHTML = '✅ ¡Luz ENCENDIDA! El cable genera campo magnético';
+        status.style.color = '#00d9ff';
+        btn.textContent = '🔌 Apagar luz';
+    } else {
+        bulb.setAttribute('fill', '#4a5568');
+        bulb.style.filter = 'none';
+        sparks.setAttribute('opacity', '0');
+        sw.setAttribute('y', '50');
+        status.innerHTML = '⚠️ La luz está APAGADA';
+        status.style.color = '#e94560';
+        btn.textContent = '🔌 Encender luz';
+    }
+}
+
+function runScanSimulation() {
+    if (simRunning) return;
+    simRunning = true;
+    const bar = document.getElementById('sim-bar');
+    const val = document.getElementById('sim-value');
+    const result = document.getElementById('sim-result');
+    let pos = 0;
+    const interval = setInterval(() => {
+        pos += 2;
+        let intensity = 5;
+        if (pos > 38 && pos < 62) {
+            const peak = 50 - Math.abs(pos - 50);
+            intensity = 5 + peak * 2.5;
+        }
+        intensity = Math.min(95, intensity);
+        bar.style.width = intensity + '%';
+        val.textContent = (intensity / 10).toFixed(1) + ' µT';
+        if (intensity > 70) val.style.color = '#e94560';
+        else if (intensity > 30) val.style.color = '#ffd700';
+        else val.style.color = '#00d9ff';
+        if (pos >= 90) {
+            clearInterval(interval);
+            simRunning = false;
+            result.innerHTML = '<span style="color: #00d9ff; font-weight: 700;">🎯 ¡Cable detectado en el centro!</span>';
+            setTimeout(() => {
+                bar.style.width = '5%';
+                val.textContent = '0.0 µT';
+                val.style.color = '#00d9ff';
+                result.textContent = '';
+            }, 2500);
+        }
+    }, 55);
+}
+
+function initPractice() {
+    const wall = document.getElementById('practice-wall');
+    const cursor = document.getElementById('practice-cursor');
+    const canvas = document.getElementById('heat-canvas');
+    function resizeCanvas() {
+        const rect = wall.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    let isDown = false;
+    function handleStart(e) { isDown = true; handleMove(e); }
+    function handleMove(e) {
+        if (!isDown) return;
+        const rect = wall.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+        const nx = x / rect.width;
+        const ny = y / rect.height;
+        cursor.style.display = 'block';
+        cursor.style.left = x + 'px';
+        cursor.style.top = y + 'px';
+        let maxSignal = 0;
+        practiceCables.forEach(c => {
+            const dist = pointToLineDist(nx, ny, c.x1, c.y1, c.x2, c.y2);
+            const signal = c.strength * Math.exp(-dist * 16);
+            maxSignal = Math.max(maxSignal, signal);
+        });
+        const intensity = Math.min(100, maxSignal);
+        document.getElementById('practice-value').textContent = intensity.toFixed(0) + '%';
+        const pbar = document.getElementById('practice-bar');
+        pbar.style.width = intensity + '%';
+        const pval = document.getElementById('practice-value');
+        if (intensity > 70) { pbar.style.background = 'linear-gradient(90deg, #ffd700, #e94560)'; pval.style.color = '#e94560'; }
+        else if (intensity > 30) { pbar.style.background = 'linear-gradient(90deg, #00d9ff, #ffd700)'; pval.style.color = '#ffd700'; }
+        else { pbar.style.background = 'linear-gradient(90deg, #00d9ff, #00b4d8)'; pval.style.color = '#00d9ff'; }
+        const ctx = canvas.getContext('2d');
+        const alpha = intensity / 180;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, 28);
+        grad.addColorStop(0, 'rgba(233, 69, 96, ' + alpha + ')');
+        grad.addColorStop(1, 'rgba(233, 69, 96, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - 28, y - 28, 56, 56);
+    }
+    function handleEnd() { isDown = false; }
+    wall.addEventListener('mousedown', handleStart);
+    wall.addEventListener('mousemove', handleMove);
+    wall.addEventListener('mouseup', handleEnd);
+    wall.addEventListener('mouseleave', handleEnd);
+    wall.addEventListener('touchstart', (e) => { handleStart(e); e.preventDefault(); }, {passive: false});
+    wall.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive: false});
+    wall.addEventListener('touchend', handleEnd);
+}
+
+function pointToLineDist(px, py, x1, y1, x2, y2) {
+    const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let param = lenSq === 0 ? -1 : dot / lenSq;
+    let xx, yy;
+    if (param < 0) { xx = x1; yy = y1; }
+    else if (param > 1) { xx = x2; yy = y2; }
+    else { xx = x1 + param * C; yy = y1 + param * D; }
+    return Math.sqrt((px - xx) ** 2 + (py - yy) ** 2);
+}
+
+function revealCables() {
+    cablesRevealed = !cablesRevealed;
+    const op = cablesRevealed ? '0.8' : '0';
+    ['pcable1', 'pcable2', 'pcable3'].forEach(id => {
+        document.getElementById(id).setAttribute('opacity', op);
+    });
+}
+
+function resetPractice() {
+    const canvas = document.getElementById('heat-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('practice-value').textContent = '0%';
+    document.getElementById('practice-bar').style.width = '0%';
+    document.getElementById('practice-cursor').style.display = 'none';
+    if (cablesRevealed) revealCables();
+}
+
+async function initSensor() {
+    const status = document.getElementById('sensor-status');
+    if ('Magnetometer' in window) {
+        try {
+            const mag = new Magnetometer({ frequency: 10 });
+            mag.addEventListener('reading', () => {
+                const magnitude = Math.sqrt(mag.x ** 2 + mag.y ** 2 + mag.z ** 2);
+                updateDetector(magnitude);
+            });
+            mag.addEventListener('error', () => { startDemoMode(); });
+            mag.start();
+            status.innerHTML = '<span class="status-active">✅ Sensor magnético activo</span>';
+            isDemoMode = false;
+        } catch (err) {
+            status.innerHTML = '<span class="status-error">⚠️ Sensor no disponible - Modo demo</span>';
+            startDemoMode();
+        }
+    } else {
+        status.innerHTML = '<span class="status-error">⚠️ Modo demostración (sensor no soportado)</span>';
+        startDemoMode();
+    }
+}
+
+function startDemoMode() {
+    isDemoMode = true;
+    let t = 0;
+    const loop = () => {
+        t += 0.04;
+        let val = 42 + Math.sin(t) * 4 + (Math.random() - 0.5) * 3;
+        const peakPhase = Math.sin(t * 0.25);
+        if (peakPhase > 0.6) {
+            val += peakPhase * 28 * Math.exp(-Math.pow((t % 25) - 12.5, 2) / 12);
+        }
+        updateDetector(Math.abs(val));
+        animId = requestAnimationFrame(loop);
+    };
+    loop();
+}
+
+function stopSensor() {
+    if (animId) { cancelAnimationFrame(animId); animId = null; }
+}
+
+function updateDetector(value) {
+    const calibrated = Math.max(0, value - baseline);
+    document.getElementById('main-value').textContent = calibrated.toFixed(1);
+    const maxScale = 50;
+    const pct = Math.min(100, (calibrated / maxScale) * 100);
+    const circ = 2 * Math.PI * 85;
+    const offset = circ - (pct / 100) * circ;
+    document.getElementById('gauge-progress').style.strokeDashoffset = offset;
+    if (calibrated > peakValue) {
+        peakValue = calibrated;
+        document.getElementById('peak-value').textContent = 'Pico: ' + peakValue.toFixed(1) + ' µT';
+    }
+    const detText = document.getElementById('detection-text');
+    const tip = document.getElementById('live-tip');
+    if (calibrated > 30) {
+        detText.innerHTML = '<span style="color: #e94560; font-weight: 700;">🔴 ¡CABLE DETECTADO! Muy cerca</span>';
+        detText.style.background = 'rgba(233,69,96,0.12)';
+        tip.innerHTML = '<span style="color: #e94560; font-weight: 700;">¡Excelente!</span> Has encontrado un cable. Marca este punto. Si mueves el teléfono y el valor baja, el cable va en la otra dirección.';
+    } else if (calibrated > 15) {
+        detText.innerHTML = '<span style="color: #ffd700; font-weight: 600;">🟡 Posible cable cercano</span>';
+        detText.style.background = 'rgba(255,215,0,0.08)';
+        tip.textContent = 'Sigue moviéndote lentamente en esa dirección. El valor debería subir más si te acercas al cable.';
+    } else {
+        detText.innerHTML = '<span style="color: #8892b0;">🔍 Buscando cables...</span>';
+        detText.style.background = 'rgba(255,255,255,0.05)';
+        tip.textContent = 'Mueve el teléfono lentamente cerca de la pared. El valor subirá cuando detectes un cable electrificado.';
+    }
+    sensorData.push(calibrated);
+    if (sensorData.length > 120) sensorData.shift();
+    drawGraph();
+}
+
+function drawGraph() {
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    if (sensorData.length < 2) return;
+    const maxVal = Math.max(40, ...sensorData);
+    const step = w / 120;
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i++) {
+        const y = h - (h / 5) * i;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.strokeStyle = '#00d9ff';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    const startIdx = Math.max(0, sensorData.length - 120);
+    sensorData.slice(startIdx).forEach((val, i) => {
+        const x = i * step;
+        const y = h - (val / maxVal) * h * 0.88 - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.lineTo((sensorData.length - startIdx - 1) * step, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0, 217, 255, 0.08)';
+    ctx.fill();
+}
+
+function calibrateSensor() {
+    baseline = parseFloat(document.getElementById('main-value').textContent) || 0;
+    peakValue = 0;
+    document.getElementById('peak-value').textContent = 'Pico: 0.0 µT';
+    sensorData = [];
+    const tip = document.getElementById('live-tip');
+    tip.innerHTML = '<span style="color: #00d9ff; font-weight: 700;">✅ Sensor calibrado.</span> Ahora aleja el móvil de metales y acércalo a la pared para buscar cables.';
+    const detText = document.getElementById('detection-text');
+    detText.innerHTML = '<span style="color: #00d9ff; font-weight: 600;">✅ Calibrado - Listo para buscar</span>';
+    detText.style.background = 'rgba(0,217,255,0.1)';
+}
+
+showStepContent(0);
+initPractice();
+
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('SW registered'))
+        .catch(err => console.log('SW error:', err));
+}
+</script>
+</body>
+</html>
